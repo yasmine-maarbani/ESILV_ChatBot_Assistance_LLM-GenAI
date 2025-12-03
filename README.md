@@ -10,7 +10,7 @@ An intelligent chatbot dedicated to the ESILV engineering school. It supports:
 ## Installation
 After cloning the repository
 ```bash
-git clone $URL
+git clone https://github.com/yasmine-maarbani/ESILV_ChatBot_Assistance_LLM-GenAI.git
 ```
 
 Please install the required Python environment with
