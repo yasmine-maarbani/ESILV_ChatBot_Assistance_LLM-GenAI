@@ -8,7 +8,7 @@ from source.config import OLLAMA_MODEL
 
 
 # Configuration de la page
-st.set_page_config(page_title="ESILV Smart Assistant", page_icon="favicon-32x32.png")
+st.set_page_config(page_title="ESILV Smart Assistant", page_icon="icon.png")
 
 # Titre principal
 st.title("🤖 ESILV Smart Assistant")
