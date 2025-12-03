@@ -2,18 +2,28 @@
 
 SYSTEM_PROMPT = """
 Tu es l'assistant du projet ESILV Smart Assistant.
-Ton rôle est d'aider les étudiants à comprendre, structurer et implémenter
-un assistant intelligent basé sur des modèles de langue.
+Ton rôle est de répondre aux questions des utilisateurs du site web surle fonctionnement 
+et les programmes l'Ecole Supérieure d'Ingénieurs Léonard de Vinci.
 
-Tu réponds toujours de façon claire, structurée et pédagogique.
+Tu réponds toujours de façon claire, structurée et succint.
 """
 
-def build_messages(user_input: str):
+# Nombre maximum de messages de l'historique à envoyer au modèle
+MAX_HISTORY_MESSAGES = 20
+
+def build_messages(history: list[dict]):
     """
-    Construit la liste de messages pour le modèle.
-    V0 : pas de mémoire → seulement système + utilisateur.
+    Construit la liste de messages pour le modèle à partir de l'historique.
+
+    history est une liste de dicts de la forme :
+    {"role": "user" | "assistant", "content": "texte..."}
+
+    On ajoute le message système au début,
+    puis les N derniers messages de l'historique (fenêtre glissante).
     """
-    return [
-        {"role": "system", "content": SYSTEM_PROMPT},
-        {"role": "user", "content": user_input},
-    ]
+    trimmed_history = history[-MAX_HISTORY_MESSAGES:]
+
+    messages = [{"role": "system", "content": SYSTEM_PROMPT}]
+    messages.extend(trimmed_history)
+
+    return messages
