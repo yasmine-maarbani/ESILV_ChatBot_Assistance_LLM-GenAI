@@ -8,18 +8,18 @@ An intelligent chatbot dedicated to the ESILV engineering school. It supports:
 - Streamlit front-end for chat, document uploads, and admin visualization
 
 ## To-do list ⭕✅
-✅ Setup the chatbot with the streamlit frontend \n
-✅ RAG agent \n
-✅ Form agent \n
-✅ Orchestrator agent \n
-✅ Admin page \n
-⭕ Save vectorstore \n
-⭕ Parent/Children LLMClient class \n
-⭕ Scraping agent \n
-⭕ Agenda sub-agent ? \n
-⭕ Web search agent \n
-⭕ JSON schema as parameter \n
-⭕ Handling updates in admin page \n
+✅ Setup the chatbot with the streamlit frontend <br>
+✅ RAG agent <br>
+✅ Form agent <br>
+✅ Orchestrator agent <br>
+✅ Admin page <br>
+⭕ Save vectorstore <br>
+⭕ Parent/Children LLMClient class <br>
+⭕ Scraping agent <br>
+⭕ Agenda sub-agent ? <br>
+⭕ Web search agent <br>
+⭕ JSON schema as parameter <br>
+⭕ Handling updates in admin page <br>
 
 
 
