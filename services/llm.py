@@ -65,6 +65,7 @@ class LLMClient:
                     _log_debug("Ollama HTTP status:", resp.status_code)
                     resp.raise_for_status()
                     data = resp.json()
+                    ## debugger print
                     print("Ollama RAW JSON:", data)
                     if isinstance(data, dict):
                         if "message" in data and isinstance(data["message"], dict):
@@ -140,6 +141,7 @@ class LLMClient:
             try:
                 if system_instruction and supports_sys_kw:
                     resp = model.generate_content(vertex_contents, system_instruction=system_instruction)
+                    # debugger print
                     print("response:", resp)
                     _log_debug("Vertex generate_content called with system_instruction kwarg")
                 else:
