@@ -1,6 +1,7 @@
 import os
 import streamlit as st
 from dotenv import load_dotenv
+import time
 
 from logo_utils import resolve_logo_path
 from configs.config import load_config
@@ -121,23 +122,26 @@ def chat_ui():
             with st.chat_message("user"):
                 st.markdown(user_input)
 
-            intent = st.session_state.get("chat_mode_select", "auto")
-            if intent == "auto":
-                route = st.session_state.orch.route(user_input)
-                intent = route.get("intent", "retrieval")
+            with st.spinner("Le modèle réfléchit..."):
+                start_time = time.time()
+                intent = st.session_state.get("chat_mode_select", "auto")
+                if intent == "auto":
+                    route = st.session_state.orch.route(user_input)
+                    intent = route.get("intent", "retrieval")
 
-            if intent == "retrieval":
-                res = st.session_state.retrieval.answer(user_input)
-                assistant_msg = _sanitize_answer(res["answer"])
-                unique_sources = list(dict.fromkeys(res["sources"]))
-                if unique_sources:
-                    assistant_msg += "\n\nSources:\n- " + "\n- ".join(unique_sources[:3])
-            else:
-                assistant_msg = st.session_state.form.next(st.session_state.transcript)
-
-            st.session_state.messages.append({"role": "assistant", "content": assistant_msg})
-            with st.chat_message("assistant"):
-                st.markdown(assistant_msg)
+                if intent == "retrieval":
+                    res = st.session_state.retrieval.answer(user_input)
+                    assistant_msg = _sanitize_answer(res["answer"])
+                    unique_sources = list(dict.fromkeys(res["sources"]))
+                    if unique_sources:
+                        assistant_msg += "\n\nSources:\n- " + "\n- ".join(unique_sources[:3])
+                else:
+                    assistant_msg = st.session_state.form.next(st.session_state.transcript)
+                response_time = time.time() - start_time
+                st.session_state.messages.append({"role": "assistant", "content": assistant_msg})
+                with st.chat_message("assistant"):
+                    st.markdown(assistant_msg)
+                    st.caption(f"⏱️ Temps de réponse : {response_time:.2f} secondes")
 
     with tab_admin:
         st.subheader("Admin")

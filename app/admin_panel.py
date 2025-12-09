@@ -12,8 +12,32 @@ def list_docs(docs_dir: str):
     return sorted(files)
 
 def admin_panel(cfg):
-    st.subheader("Admin")
 
+    # Button to launch scraping
+    st.markdown("### Collect data from the website :")
+    if st.button("Launch collect", key="admin_scraping_btn"):
+        try:
+            py = sys.executable  # ensure same interpreter/venv as Streamlit
+            cmd = [py, "-m", "scraping.scraper"]
+            with st.spinner("Collecting data..."):
+                result = subprocess.run(cmd, capture_output=True, text=True)
+            if result.returncode == 0:
+                st.success("Data collected successfully.")
+                # Signal Chat tab to reload the index automatically
+                st.session_state["needs_index_reload"] = True
+                if result.stdout:
+                    st.text(result.stdout)
+            else:
+                st.error("Scraping failed.")
+                st.text(result.stdout or "")
+                st.text(result.stderr or "")
+        except Exception as e:
+            st.error(f"Failed to collect data: {e}")
+
+    st.markdown("---")
+
+    # Upload documents
+    st.markdown("### Upload new documents and update old ones :")
     docs_dir = cfg["rag"]["docs_dir"]
     index_dir = cfg["rag"]["index_dir"]
 

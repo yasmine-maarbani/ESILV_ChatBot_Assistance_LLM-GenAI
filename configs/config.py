@@ -6,7 +6,7 @@ def load_config():
     return {
         "llm": {
             "provider": os.getenv("LLM_PROVIDER", "ollama"),
-            "ollama_model": os.getenv("OLLAMA_MODEL", "phi3:mini"),
+            "ollama_model": os.getenv("OLLAMA_MODEL", "mistral"),
             "vertex_model": os.getenv("VERTEX_MODEL", "gemini-1.5-flash"),
             "gcp_project_id": os.getenv("GCP_PROJECT_ID", ""),
             "gcp_location": os.getenv("GCP_LOCATION", "us-central1"),

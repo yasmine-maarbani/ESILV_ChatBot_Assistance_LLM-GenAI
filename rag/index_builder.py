@@ -2,16 +2,37 @@ import os, uuid, argparse, pathlib
 from bs4 import BeautifulSoup
 import requests
 from tqdm import tqdm
+from pypdf import PdfReader
 from .vector_store import VectorStore
+
+
+SUPPORTED_EXTENSTIONS = {".txt", ".md"}
+
+def _read_text_file(path: Path) -> str:
+    """Read text file (txt / md) in UTF-8."""
+    return path.read_text(encoding="utf-8", errors="ignore")
+
+
+def _read_pdf_file(path: Path) -> str:
+    """Read pdf file and aggregate text from all pages"""
+    reader = PdfReader(str(path))
+    texts: List[str] = []
+    for page in reader.pages:
+        page_text = page.extract_text() or ""
+        texts.append(page_text)
+    return "\n".join(texts)
 
 def load_local_docs(docs_dir: str):
     texts, metas, ids = [], [], []
     base = pathlib.Path(docs_dir)
     base.mkdir(parents=True, exist_ok=True)
     for p in base.glob("**/*"):
-        if p.is_file() and p.suffix.lower() in {".txt", ".md"}:
+        if p.is_file() and p.suffix.lower() in SUPPORTED_EXTENSTIONS:
             try:
-                t = p.read_text(encoding="utf-8", errors="ignore")
+                if path.suffix.lower() in {".txt", ".md"}:
+                    t = _read_text_file(p)
+                elif path.suffix.lower() == ".pdf":
+                    t = _read_pdf_file(p)
                 texts.append(t)
                 metas.append({"source": str(p)})
                 ids.append(str(uuid.uuid4()))

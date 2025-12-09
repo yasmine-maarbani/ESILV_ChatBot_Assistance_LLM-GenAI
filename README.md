@@ -13,13 +13,17 @@ An intelligent chatbot dedicated to the ESILV engineering school. It supports:
 ✅ Form agent <br>
 ✅ Orchestrator agent <br>
 ✅ Admin page <br>
-⭕ Save vectorstore <br>
+✅ Display answering time <br>
+✅ Save vectorstore <br>
+✅ Scraping button <br>
+✅ RAG handles .pdf files
+❔ Scraping agent <br>
 ⭕ Parent/Children LLMClient class <br>
-⭕ Scraping agent <br>
 ⭕ Agenda sub-agent ? <br>
 ⭕ Web search agent <br>
 ⭕ JSON schema as parameter <br>
 ⭕ Handling updates in admin page <br>
+⚠️ Update instructions in README.md
 
 
 
