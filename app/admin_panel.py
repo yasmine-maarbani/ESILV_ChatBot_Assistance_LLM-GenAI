@@ -1,0 +1,72 @@
+import os
+import sys
+import subprocess
+import streamlit as st
+
+def list_docs(docs_dir: str):
+    files = []
+    for root, _, filenames in os.walk(docs_dir):
+        for fn in filenames:
+            if fn.lower().endswith((".md", ".txt")):
+                files.append(os.path.relpath(os.path.join(root, fn), docs_dir))
+    return sorted(files)
+
+def admin_panel(cfg):
+    st.subheader("Admin")
+
+    docs_dir = cfg["rag"]["docs_dir"]
+    index_dir = cfg["rag"]["index_dir"]
+
+    st.write(f"Documents directory: {docs_dir}")
+    os.makedirs(docs_dir, exist_ok=True)
+
+    # Upload docs
+    st.write("Upload documents for indexing (.txt/.md):")
+    uploaded = st.file_uploader(
+        "Upload .txt/.md",
+        type=["txt", "md"],
+        accept_multiple_files=True,
+        help="Files are saved immediately to the docs directory.",
+        key="admin_upload_docs",
+    )
+    if uploaded:
+        saved = 0
+        overwritten = 0
+        for f in uploaded:
+            path = os.path.join(docs_dir, f.name)
+            if os.path.exists(path):
+                overwritten += 1
+            with open(path, "wb") as out:
+                out.write(f.read())
+            saved += 1
+        st.success(f"Saved {saved} files to {docs_dir} (overwritten: {overwritten}).")
+
+    # Show current docs
+    st.write("Current documents:")
+    docs = list_docs(docs_dir)
+    if docs:
+        st.code("\n".join(docs), language="text")
+    else:
+        st.info("No .md/.txt documents in the docs directory.")
+
+    # Rebuild index button
+    st.write("Index:")
+    st.caption(f"Index directory: {index_dir}")
+    if st.button("Rebuild Index", key="admin_rebuild_index_btn"):
+        try:
+            py = sys.executable  # ensure same interpreter/venv as Streamlit
+            cmd = [py, "-m", "rag.index_builder", "--docs-dir", docs_dir, "--index-dir", index_dir]
+            with st.spinner("Rebuilding index..."):
+                result = subprocess.run(cmd, capture_output=True, text=True)
+            if result.returncode == 0:
+                st.success("Index rebuilt successfully.")
+                # Signal Chat tab to reload the index automatically
+                st.session_state["needs_index_reload"] = True
+                if result.stdout:
+                    st.text(result.stdout)
+            else:
+                st.error("Index rebuild failed.")
+                st.text(result.stdout or "")
+                st.text(result.stderr or "")
+        except Exception as e:
+            st.error(f"Failed to rebuild index: {e}")
