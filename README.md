@@ -26,9 +26,3 @@ An intelligent chatbot dedicated to the ESILV engineering school. It supports:
 ⚠️ Update instructions in README.md
 
 
-
-about form agent: JSON schema as a parameter (we have to check if it is possible for ollama & vertex)
-to save the embeddings instead of reloading it each time
-make two separates clients one vertex and one ollama 
-for RAG: web searcher & web scrapping 
-for the admin page: what if i upload again the same info that i already have, let make some thing it asks the user "do u want to update this document" , and then we check if we want to update it or just add a new one

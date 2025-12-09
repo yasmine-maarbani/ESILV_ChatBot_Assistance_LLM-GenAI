@@ -12,13 +12,16 @@ def list_docs(docs_dir: str):
     return sorted(files)
 
 def admin_panel(cfg):
+    docs_dir = cfg["rag"]["docs_dir"]
+    index_dir = cfg["rag"]["index_dir"]
+    scraping_dir = cfg["rag"]["scraping_dir"]
 
     # Button to launch scraping
     st.markdown("### Collect data from the website :")
     if st.button("Launch collect", key="admin_scraping_btn"):
         try:
             py = sys.executable  # ensure same interpreter/venv as Streamlit
-            cmd = [py, "-m", "scraping.scraper"]
+            cmd = [py, "-m", "scraping.scraper", "--raw-dir", scraping_dir, "--parsed-dir", docs_dir]
             with st.spinner("Collecting data..."):
                 result = subprocess.run(cmd, capture_output=True, text=True)
             if result.returncode == 0:
@@ -38,8 +41,6 @@ def admin_panel(cfg):
 
     # Upload documents
     st.markdown("### Upload new documents and update old ones :")
-    docs_dir = cfg["rag"]["docs_dir"]
-    index_dir = cfg["rag"]["index_dir"]
 
     st.write(f"Documents directory: {docs_dir}")
     os.makedirs(docs_dir, exist_ok=True)

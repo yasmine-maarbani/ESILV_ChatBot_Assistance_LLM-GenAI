@@ -14,6 +14,7 @@ def load_config():
         "rag": {
             "docs_dir": os.getenv("DOCS_DIR", "data/docs"),
             "index_dir": os.getenv("INDEX_DIR", "data/index"),
+            "scraping_dir": os.getenv("SCRAPING_DIR", "data/raw"),
         },
         "app": {
             "persist_contacts_path": os.getenv("PERSIST_CONTACTS_PATH", "data/contacts.jsonl"),
