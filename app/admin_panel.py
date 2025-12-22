@@ -2,6 +2,8 @@ import os
 import sys
 import subprocess
 import streamlit as st
+from datetime import datetime
+from pathlib import Path
 
 def list_docs(docs_dir: str):
     files = []
@@ -11,6 +13,12 @@ def list_docs(docs_dir: str):
                 files.append(os.path.relpath(os.path.join(root, fn), docs_dir))
     return sorted(files)
 
+SCRAPE_META_FILE = Path("data/last_scrape.txt")
+def get_last_scrape_time():
+    if SCRAPE_META_FILE.exists():
+        return datetime.fromisoformat(SCRAPE_META_FILE.read_text())
+    return None
+
 def admin_panel(cfg):
     docs_dir = cfg["rag"]["docs_dir"]
     index_dir = cfg["rag"]["index_dir"]
@@ -18,6 +26,10 @@ def admin_panel(cfg):
 
     # Button to launch scraping
     st.markdown("### Collect data from the website :")
+    last_scrape = get_last_scrape_time()
+    if last_scrape:
+        st.caption(f"Last run : {last_scrape.strftime('%d/%m/%Y à %H:%M:%S')}")
+        st.caption(f"Time since last scraping: {(st.session_state.app_start_time - last_scrape).days} days.")
     if st.button("Launch collect", key="admin_scraping_btn"):
         try:
             py = sys.executable  # ensure same interpreter/venv as Streamlit

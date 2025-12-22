@@ -1,5 +1,6 @@
 import os, argparse
 from pathlib import Path
+from datetime import datetime
 from typing import Iterable, List
 from urllib.parse import urlparse
 
@@ -60,22 +61,26 @@ if __name__ == "__main__":
 
     pages_url = discover_all_urls(max_pages=100)
 
-    print("[1] Téléchargement des pages HTML…")
+    #print("[1] Téléchargement des pages HTML…")
     downloaded = scrape_esilv_pages(
         urls=pages_url,
         output_dir=args.raw_dir,
     )
-    print(f"   -> {len(downloaded)} pages téléchargées")
-    for f in downloaded:
-        print(f"     - {f}")
+    #print(f"   -> {len(downloaded)} pages téléchargées")
+    # for f in downloaded:
+    #     print(f"     - {f}")
 
-    print("\n[2] Extraction du texte depuis les fichiers HTML…")
+    #print("\n[2] Extraction du texte depuis les fichiers HTML…")
     extracted = parse_html_folder(
         input_dir=args.raw_dir,
         output_dir=args.parsed_dir,
     )
-    print(f"   -> {len(extracted)} fichiers texte générés")
-    for f in extracted:
-        print(f"     - {f}")
+    #print(f"   -> {len(extracted)} fichiers texte générés")
+    # for f in extracted:
+    #     print(f"     - {f}")
 
+
+    SCRAPE_META_FILE = Path("data/last_scrape.txt")
+    SCRAPE_META_FILE.parent.mkdir(parents=True, exist_ok=True)
+    SCRAPE_META_FILE.write_text(datetime.now().isoformat())
 

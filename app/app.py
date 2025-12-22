@@ -2,26 +2,36 @@ import os
 import streamlit as st
 from dotenv import load_dotenv
 import time
+from datetime import datetime
+from pathlib import Path
+import sys
+import subprocess
 
 from logo_utils import resolve_logo_path
 from configs.config import load_config
-from services.llm import LLMClient, LLMConfig
+from services.llm import LLMClient, LLMConfig, OllamaClient, VertexClient
 from rag.vector_store import VectorStore
 from agents.orchestrator import Orchestrator
 from agents.retrieval_agent import RetrievalAgent
 from agents.form_agent import FormAgent, Contact
-from admin_panel import admin_panel  # Admin-only controls
+from admin_panel import admin_panel, get_last_scrape_time  # Admin-only controls
 
 def init_services():
     load_dotenv()
     cfg = load_config()
-    llm = LLMClient(LLMConfig(
+    conf = LLMConfig(
         provider=cfg["llm"]["provider"],
         ollama_model=cfg["llm"]["ollama_model"],
         vertex_model=cfg["llm"]["vertex_model"],
         gcp_project_id=cfg["llm"].get("gcp_project_id"),
         gcp_location=cfg["llm"].get("gcp_location"),
-    ))
+    )
+    if conf.provider == "ollama":
+        llm = OllamaClient(conf)
+    elif conf.provider == "vertex":
+        llm = VertexClient(conf)
+    else:
+        llm = LLMClient(conf)
     vs = VectorStore(cfg["rag"]["index_dir"])
     return cfg, llm, vs
 
@@ -52,6 +62,38 @@ def _sanitize_answer(text: str) -> str:
         lines.append(line)
     return "\n".join(lines).strip()
 
+def auto_scraping(docs_dir, scraping_dir):
+    if "app_start_time" not in st.session_state:
+        st.session_state.app_start_time = datetime.now()
+    
+    last_scrape = get_last_scrape_time()
+    if last_scrape:
+        st.sidebar.caption(f"Dernier scraping : {last_scrape.strftime('%d/%m/%Y à %H:%M:%S')}")
+        st.sidebar.caption(f"Time since last scraping: {(st.session_state.app_start_time - last_scrape).days} days.")
+        if (st.session_state.app_start_time - last_scrape).days >= 2 :
+            st.sidebar.caption("The retrieval database might be obsolete.")
+            st.sidebar.caption("Updating the database:")
+            try:
+                py = sys.executable  # ensure same interpreter/venv as Streamlit
+                cmd = [py, "-m", "scraping.scraper", "--raw-dir", scraping_dir, "--parsed-dir", docs_dir]
+                with st.sidebar.caption("Collecting data..."):
+                    result = subprocess.run(cmd, capture_output=True, text=True)
+                if result.returncode == 0:
+                    st.sidebar.success("Data collected successfully.")
+                    # Signal Chat tab to reload the index automatically
+                    st.session_state["needs_index_reload"] = True
+                    if result.stdout:
+                        st.text(result.stdout)
+                else:
+                    st.sidebar.error("Scraping failed.")
+                    st.sidebar.text(result.stdout or "")
+                    st.sidebar.text(result.stderr or "")
+            except Exception as e:
+                st.sidebar.error(f"Failed to collect data: {e}")
+    else:
+        st.sidebar.caption("Aucun scraping détecté")
+
+
 def chat_ui():
     st.set_page_config(page_title="ESILV Assistant", page_icon="🎓", layout="wide")
     _ensure_services()
@@ -79,6 +121,11 @@ def chat_ui():
     with cols[1]:
         st.title("ESILV Smart Assistant")
         st.caption("Factual Q&A, contact collection, and admin tools")
+
+    auto_scraping(
+        docs_dir = cfg["rag"]["docs_dir"],
+        scraping_dir = cfg["rag"]["scraping_dir"]
+    )
 
 
     tab_home, tab_chat, tab_admin = st.tabs(["Home", "Chat", "Admin"])
