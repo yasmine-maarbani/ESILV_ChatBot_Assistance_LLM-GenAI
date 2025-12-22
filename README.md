@@ -19,7 +19,7 @@ An intelligent chatbot dedicated to the ESILV engineering school. It supports:
 ✅ Scraping button <br>
 ✅ RAG handles .pdf files
 ✅ Parent/Children LLMClient class <br>
-❌ Automation of weekly scraping on the website and daily scraping on agenda <br>
+✅ Automation of weekly scraping on the website and daily scraping on agenda <br>
 ❌ Web search agent <br>
 ❌ JSON schema as parameter <br>
 ❌ Handling updates in admin page <br>
