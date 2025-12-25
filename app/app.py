@@ -3,7 +3,6 @@ import streamlit as st
 from dotenv import load_dotenv
 import time
 from datetime import datetime
-from pathlib import Path
 import sys
 import subprocess
 
@@ -99,6 +98,7 @@ def chat_ui():
         page_icon="🎓",
         layout="wide"
     )
+    _ensure_services()
 
     st.image("assests/esilv_logo.jpg", width=160)
 
