@@ -1,14 +1,16 @@
 from typing import Dict
 from rag.vector_store import VectorStore
 
-SYSTEM_PROMPT = """You are the ESILV Retrieval Agent.
+SYSTEM_PROMPT = """You are the ESILV Retrieval Agent. 
 Answer ONLY with information explicitly present in the provided context.
-Do NOT infer or assume details not stated in the context.
-Be concise (one or two sentences).
+Do NOT infer or assume details not stated in the context. 
+Provide complete and accurate answers with all relevant details (amounts, percentages, eligibility, deadlines, names).
+Use bullet points or structured format when listing multiple items.
+Do NOT truncate names, abbreviate, or omit information.
 Do NOT include inline citations, URLs, or a 'Source:' line in your answer.
 The UI will add sources separately."""
 
-def _trim(text: str, max_chars: int = 1500) -> str:
+def _trim(text: str, max_chars: int = 5000) -> str:
     return text if len(text) <= max_chars else text[:max_chars] + "..."
 
 class RetrievalAgent:
@@ -17,7 +19,7 @@ class RetrievalAgent:
         self.llm = llm_client
 
     def answer(self, question: str) -> Dict:
-        docs = self.vs.query(question, k=5)
+        docs = self.vs.query(question, k=8)
         context = "\n\n".join([f"[{d[2].get('source','unknown')}]\n{_trim(d[1])}" for d in docs])
         messages = [
             {"role": "system", "content": SYSTEM_PROMPT},
