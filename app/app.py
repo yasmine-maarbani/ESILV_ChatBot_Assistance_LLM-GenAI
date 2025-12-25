@@ -159,6 +159,7 @@ def chat_ui():
                 if intent == "auto":
                     route = st.session_state.orch.route(user_input)
                     intent = route.get("intent", "retrieval")
+                    st.caption(f"🔀 Routed to: **{intent}** ({route.get('notes', '')})")
 
                 if intent == "retrieval":
                     res = st.session_state.retrieval.answer(user_input)

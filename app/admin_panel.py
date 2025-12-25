@@ -60,8 +60,8 @@ def admin_panel(cfg):
     # Upload docs
     st.write("Upload documents for indexing (.txt/.md):")
     uploaded = st.file_uploader(
-        "Upload .txt/.md",
-        type=["txt", "md"],
+        "Upload .txt/.md/.pdf files",
+        type=["txt", "md", "pdf"],
         accept_multiple_files=True,
         help="Files are saved immediately to the docs directory.",
         key="admin_upload_docs",
