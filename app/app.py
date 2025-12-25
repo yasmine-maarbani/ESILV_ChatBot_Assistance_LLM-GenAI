@@ -7,7 +7,6 @@ from pathlib import Path
 import sys
 import subprocess
 
-from logo_utils import resolve_logo_path
 from configs.config import load_config
 from services.llm import LLMClient, LLMConfig, OllamaClient, VertexClient
 from rag.vector_store import VectorStore
@@ -95,38 +94,23 @@ def auto_scraping(docs_dir, scraping_dir):
 
 
 def chat_ui():
-    st.set_page_config(page_title="ESILV Assistant", page_icon="🎓", layout="wide")
-    _ensure_services()
+    st.set_page_config(
+        page_title="ESILV Assistant",
+        page_icon="🎓",
+        layout="wide"
+    )
+
+    st.image("assests/esilv_logo.jpg", width=160)
+
+    st.title("ESILV Smart Assistant")
+    st.caption("Factual Q&A, contact collection, and admin tools")
 
     cfg = st.session_state.cfg
-    llm = st.session_state.llm
-    # Resolve logo path robustly
-    raw_logo = cfg["app"].get("logo_path")  # ensure your config uses 'logo_path'
-    app_dir = os.path.dirname(__file__)
-    logo_path = resolve_logo_path(raw_logo, app_dir)
-
-    # Header
-    cols = st.columns([1, 4])
-    with cols[0]:
-        try:
-            if logo_path:
-                # use width instead of deprecated use_column_width
-                st.image(logo_path, width=160)
-            else:
-                # Fallback to a URL placeholder
-                st.image("https://via.placeholder.com/160x48?text=ESILV+Logo", width=160)
-        except Exception:
-            st.image("https://via.placeholder.com/160x48?text=ESILV+Logo", width=160)
-
-    with cols[1]:
-        st.title("ESILV Smart Assistant")
-        st.caption("Factual Q&A, contact collection, and admin tools")
 
     auto_scraping(
         docs_dir = cfg["rag"]["docs_dir"],
         scraping_dir = cfg["rag"]["scraping_dir"]
     )
-
 
     tab_home, tab_chat, tab_admin = st.tabs(["Home", "Chat", "Admin"])
 

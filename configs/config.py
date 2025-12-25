@@ -18,6 +18,5 @@ def load_config():
         },
         "app": {
             "persist_contacts_path": os.getenv("PERSIST_CONTACTS_PATH", "data/contacts.jsonl"),
-            "logo_path": os.getenv("LOGO_PATH", "assets/esilv_logo.jpg"),
         },
     }
