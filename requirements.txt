@@ -9,3 +9,6 @@ tqdm>=4.66.4
 google-cloud-aiplatform>=1.74.0
 beautifulsoup4>=4.12.0
 lxml>=4.9.0
+pydantic[email]
+pypdf
+urllib

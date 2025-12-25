@@ -37,16 +37,22 @@ class LLMClient:
     def __init__(self, cfg: LLMConfig):
         self.cfg = cfg
         _log_debug("Init LLMClient", {"provider": cfg.provider, "ollama_model": cfg.ollama_model, "vertex_model": cfg.vertex_model, "project": cfg.gcp_project_id, "location": cfg.gcp_location})
-        if cfg.provider == "ollama":
-            import requests
-            self._requests = requests
-            self._base_url = "http://localhost:11434"
-        elif cfg.provider == "vertex":
-            from vertexai import init
-            init(project=cfg.gcp_project_id, location=cfg.gcp_location)
-        else:
-            raise ValueError("Unknown LLM provider")
+                    
+        # else:
+        #     raise ValueError("Unknown LLM provider")
 
+    def chat(self, messages: List[dict]) -> str:
+        raise ValueError(f"You called the parent class LLMClient. You may call either OllamaClient or VertexClient instead (your provider is {self.cfg.provider}).")
+        
+
+
+class OllamaClient(LLMClient):
+    def __init__(self, cfg: LLMConfig):
+        super().__init__(cfg)
+        import requests
+        self._requests = requests
+        self._base_url = "http://localhost:11434"
+    
     def chat(self, messages: List[dict]) -> str:
         _log_debug("Chat called with provider:", self.cfg.provider)
         _log_debug("Messages:", messages)
@@ -88,8 +94,21 @@ class LLMClient:
                 except Exception as e:
                     _log_debug("Ollama exception:", repr(e))
                     raise
-
         else:
+            raise ValueError(f"The LLM provider is {self.cfg.provider}, but you called OllamaClient.")
+
+
+class VertexClient(LLMClient):
+    def __init__(self, cfg: LLMConfig):
+        super().__init__(cfg)
+        from vertexai import init
+        init(project=cfg.gcp_project_id, location=cfg.gcp_location)
+    
+    def chat(self, messages: List[dict]) -> str:
+        _log_debug("Chat called with provider:", self.cfg.provider)
+        _log_debug("Messages:", messages)
+
+        if self.cfg.provider == "vertex":
             # Vertex-specific handling
             from vertexai.generative_models import GenerativeModel, Part, Content
 
@@ -160,3 +179,6 @@ class LLMClient:
                 pass
 
             return getattr(resp, "text", "")
+
+        else:
+            raise ValueError(f"The LLM provider is {self.cfg.provider}, but you called VertexClient.")

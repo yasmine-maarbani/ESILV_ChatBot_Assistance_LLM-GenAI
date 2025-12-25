@@ -1,26 +1,35 @@
 import os
 import streamlit as st
 from dotenv import load_dotenv
+import time
+from datetime import datetime
+import sys
+import subprocess
 
-from logo_utils import resolve_logo_path
 from configs.config import load_config
-from services.llm import LLMClient, LLMConfig
+from services.llm import LLMClient, LLMConfig, OllamaClient, VertexClient
 from rag.vector_store import VectorStore
 from agents.orchestrator import Orchestrator
 from agents.retrieval_agent import RetrievalAgent
 from agents.form_agent import FormAgent, Contact
-from admin_panel import admin_panel  # Admin-only controls
+from admin_panel import admin_panel, get_last_scrape_time  # Admin-only controls
 
 def init_services():
     load_dotenv()
     cfg = load_config()
-    llm = LLMClient(LLMConfig(
+    conf = LLMConfig(
         provider=cfg["llm"]["provider"],
         ollama_model=cfg["llm"]["ollama_model"],
         vertex_model=cfg["llm"]["vertex_model"],
         gcp_project_id=cfg["llm"].get("gcp_project_id"),
         gcp_location=cfg["llm"].get("gcp_location"),
-    ))
+    )
+    if conf.provider == "ollama":
+        llm = OllamaClient(conf)
+    elif conf.provider == "vertex":
+        llm = VertexClient(conf)
+    else:
+        llm = LLMClient(conf)
     vs = VectorStore(cfg["rag"]["index_dir"])
     return cfg, llm, vs
 
@@ -51,34 +60,57 @@ def _sanitize_answer(text: str) -> str:
         lines.append(line)
     return "\n".join(lines).strip()
 
+def auto_scraping(docs_dir, scraping_dir):
+    if "app_start_time" not in st.session_state:
+        st.session_state.app_start_time = datetime.now()
+    
+    last_scrape = get_last_scrape_time()
+    if last_scrape:
+        st.sidebar.caption(f"Dernier scraping : {last_scrape.strftime('%d/%m/%Y à %H:%M:%S')}")
+        st.sidebar.caption(f"Time since last scraping: {(st.session_state.app_start_time - last_scrape).days} days.")
+        if (st.session_state.app_start_time - last_scrape).days >= 2 :
+            st.sidebar.caption("The retrieval database might be obsolete.")
+            st.sidebar.caption("Updating the database:")
+            try:
+                py = sys.executable  # ensure same interpreter/venv as Streamlit
+                cmd = [py, "-m", "scraping.scraper", "--raw-dir", scraping_dir, "--parsed-dir", docs_dir]
+                with st.sidebar.caption("Collecting data..."):
+                    result = subprocess.run(cmd, capture_output=True, text=True)
+                if result.returncode == 0:
+                    st.sidebar.success("Data collected successfully.")
+                    # Signal Chat tab to reload the index automatically
+                    st.session_state["needs_index_reload"] = True
+                    if result.stdout:
+                        st.text(result.stdout)
+                else:
+                    st.sidebar.error("Scraping failed.")
+                    st.sidebar.text(result.stdout or "")
+                    st.sidebar.text(result.stderr or "")
+            except Exception as e:
+                st.sidebar.error(f"Failed to collect data: {e}")
+    else:
+        st.sidebar.caption("Aucun scraping détecté")
+
+
 def chat_ui():
-    st.set_page_config(page_title="ESILV Assistant", page_icon="🎓", layout="wide")
+    st.set_page_config(
+        page_title="ESILV Assistant",
+        page_icon="🎓",
+        layout="wide"
+    )
     _ensure_services()
 
+    st.image("assests/esilv_logo.jpg", width=160)
+
+    st.title("ESILV Smart Assistant")
+    st.caption("Factual Q&A, contact collection, and admin tools")
+
     cfg = st.session_state.cfg
-    llm = st.session_state.llm
-    # Resolve logo path robustly
-    raw_logo = cfg["app"].get("logo_path")  # ensure your config uses 'logo_path'
-    app_dir = os.path.dirname(__file__)
-    logo_path = resolve_logo_path(raw_logo, app_dir)
 
-    # Header
-    cols = st.columns([1, 4])
-    with cols[0]:
-        try:
-            if logo_path:
-                # use width instead of deprecated use_column_width
-                st.image(logo_path, width=160)
-            else:
-                # Fallback to a URL placeholder
-                st.image("https://via.placeholder.com/160x48?text=ESILV+Logo", width=160)
-        except Exception:
-            st.image("https://via.placeholder.com/160x48?text=ESILV+Logo", width=160)
-
-    with cols[1]:
-        st.title("ESILV Smart Assistant")
-        st.caption("Factual Q&A, contact collection, and admin tools")
-
+    auto_scraping(
+        docs_dir = cfg["rag"]["docs_dir"],
+        scraping_dir = cfg["rag"]["scraping_dir"]
+    )
 
     tab_home, tab_chat, tab_admin = st.tabs(["Home", "Chat", "Admin"])
 
@@ -121,23 +153,26 @@ def chat_ui():
             with st.chat_message("user"):
                 st.markdown(user_input)
 
-            intent = st.session_state.get("chat_mode_select", "auto")
-            if intent == "auto":
-                route = st.session_state.orch.route(user_input)
-                intent = route.get("intent", "retrieval")
+            with st.spinner("Le modèle réfléchit..."):
+                start_time = time.time()
+                intent = st.session_state.get("chat_mode_select", "auto")
+                if intent == "auto":
+                    route = st.session_state.orch.route(user_input)
+                    intent = route.get("intent", "retrieval")
 
-            if intent == "retrieval":
-                res = st.session_state.retrieval.answer(user_input)
-                assistant_msg = _sanitize_answer(res["answer"])
-                unique_sources = list(dict.fromkeys(res["sources"]))
-                if unique_sources:
-                    assistant_msg += "\n\nSources:\n- " + "\n- ".join(unique_sources[:3])
-            else:
-                assistant_msg = st.session_state.form.next(st.session_state.transcript)
-
-            st.session_state.messages.append({"role": "assistant", "content": assistant_msg})
-            with st.chat_message("assistant"):
-                st.markdown(assistant_msg)
+                if intent == "retrieval":
+                    res = st.session_state.retrieval.answer(user_input)
+                    assistant_msg = _sanitize_answer(res["answer"])
+                    unique_sources = list(dict.fromkeys(res["sources"]))
+                    if unique_sources:
+                        assistant_msg += "\n\nSources:\n- " + "\n- ".join(unique_sources[:3])
+                else:
+                    assistant_msg = st.session_state.form.next(st.session_state.transcript)
+                response_time = time.time() - start_time
+                st.session_state.messages.append({"role": "assistant", "content": assistant_msg})
+                with st.chat_message("assistant"):
+                    st.markdown(assistant_msg)
+                    st.caption(f"⏱️ Temps de réponse : {response_time:.2f} secondes")
 
     with tab_admin:
         st.subheader("Admin")

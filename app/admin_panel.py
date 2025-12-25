@@ -2,6 +2,8 @@ import os
 import sys
 import subprocess
 import streamlit as st
+from datetime import datetime
+from pathlib import Path
 
 def list_docs(docs_dir: str):
     files = []
@@ -11,11 +13,46 @@ def list_docs(docs_dir: str):
                 files.append(os.path.relpath(os.path.join(root, fn), docs_dir))
     return sorted(files)
 
-def admin_panel(cfg):
-    st.subheader("Admin")
+SCRAPE_META_FILE = Path("data/last_scrape.txt")
+def get_last_scrape_time():
+    if SCRAPE_META_FILE.exists():
+        return datetime.fromisoformat(SCRAPE_META_FILE.read_text())
+    return None
 
+def admin_panel(cfg):
     docs_dir = cfg["rag"]["docs_dir"]
     index_dir = cfg["rag"]["index_dir"]
+    scraping_dir = cfg["rag"]["scraping_dir"]
+
+    # Button to launch scraping
+    st.markdown("### Collect data from the website :")
+    last_scrape = get_last_scrape_time()
+    if last_scrape:
+        st.caption(f"Last run : {last_scrape.strftime('%d/%m/%Y à %H:%M:%S')}")
+        st.caption(f"Time since last scraping: {(st.session_state.app_start_time - last_scrape).days} days.")
+    if st.button("Launch collect", key="admin_scraping_btn"):
+        try:
+            py = sys.executable  # ensure same interpreter/venv as Streamlit
+            cmd = [py, "-m", "scraping.scraper", "--raw-dir", scraping_dir, "--parsed-dir", docs_dir]
+            with st.spinner("Collecting data..."):
+                result = subprocess.run(cmd, capture_output=True, text=True)
+            if result.returncode == 0:
+                st.success("Data collected successfully.")
+                # Signal Chat tab to reload the index automatically
+                st.session_state["needs_index_reload"] = True
+                if result.stdout:
+                    st.text(result.stdout)
+            else:
+                st.error("Scraping failed.")
+                st.text(result.stdout or "")
+                st.text(result.stderr or "")
+        except Exception as e:
+            st.error(f"Failed to collect data: {e}")
+
+    st.markdown("---")
+
+    # Upload documents
+    st.markdown("### Upload new documents and update old ones :")
 
     st.write(f"Documents directory: {docs_dir}")
     os.makedirs(docs_dir, exist_ok=True)
