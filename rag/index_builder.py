@@ -1,10 +1,15 @@
-import os, uuid, argparse, pathlib
+import os
+import uuid
+import argparse
+import pathlib
+import shutil
+import time
+import gc
 from typing import List
 from pathlib import Path
 from tqdm import tqdm
-import shutil
 
-# Conditional import for web crawl
+# Conditional imports
 try:
     from bs4 import BeautifulSoup
     import requests
@@ -27,7 +32,7 @@ if PDF_AVAILABLE:
     SUPPORTED_EXTENSIONS.add(".pdf")
 
 def _read_text_file(path: Path) -> str:
-    """Read text file (txt / md) in UTF-8."""
+    """Read text file (txt/md) in UTF-8."""
     return path.read_text(encoding="utf-8", errors="ignore")
 
 
@@ -47,8 +52,28 @@ def load_local_docs(docs_dir: str):
     texts, metas, ids = [], [], []
     base = pathlib.Path(docs_dir)
     base.mkdir(parents=True, exist_ok=True)
+
+    # DEBUG
+    print(f"\n=== LOADING DOCUMENTS ===")
+    print(f"docs_dir = {docs_dir}")
+    print(f"base = {base.absolute()}")
+    print(f"SUPPORTED_EXTENSIONS = {SUPPORTED_EXTENSIONS}")
+
+    all_files = list(base.glob("**/*"))
+    files_only = [f for f in all_files if f.is_file()]
+    print(f"Total files found: {len(files_only)}")
+
+    # Count by extension
+    from collections import Counter
+    exts = Counter([f.suffix.lower() for f in files_only])
+    print(f"Files by extension: {dict(exts)}")
+    print("=========================\n")
+
     for p in base.glob("**/*"):
-        if p.is_file() and p.suffix.lower() in SUPPORTED_EXTENSIONS:
+        if not p.is_file():
+            continue
+
+        if p.suffix.lower() in SUPPORTED_EXTENSIONS:
             try:
                 if p.suffix.lower() in {".txt", ".md"}:
                     t = _read_text_file(p)
@@ -60,7 +85,9 @@ def load_local_docs(docs_dir: str):
                 metas.append({"source": str(p.relative_to(base))})
                 ids.append(str(uuid.uuid4()))
             except Exception as e:
-                print(f"Failed to read {p}:  {e}")
+                print(f"Failed to read {p}: {e}")
+
+    print(f"\nSuccessfully loaded {len(texts)} documents\n")
     return ids, texts, metas
 
 
@@ -81,16 +108,38 @@ def crawl_urls(urls):
             print(f"Failed to crawl {url}: {e}")
     return ids, texts, metas
 
-def main(docs_dir: str, index_dir: str, urls=None):
-    # Clear existing index before rebuild
-    if os.path.exists(index_dir):
-        shutil.rmtree(index_dir)
-        print(f"Cleared existing index at {index_dir}")
 
+def main(docs_dir: str, index_dir: str, urls=None):
+    """Build/rebuild the RAG index from local docs and optional URLs."""
+
+    print("Initializing VectorStore...")
+
+    # Delete and recreate collection for clean slate
+    try:
+        import chromadb
+        from chromadb.utils import embedding_functions
+
+        client = chromadb.PersistentClient(path=index_dir)
+
+        # Try to delete existing collection
+        try:
+            client.delete_collection(name="esilv_docs")
+            print("Deleted existing collection 'esilv_docs'")
+        except:
+            print("No existing collection found (this is fine)")
+
+    except Exception as e:
+        print(f"Note: Could not access ChromaDB client: {e}")
+
+    # Create fresh VectorStore (creates new collection)
     vs = VectorStore(index_dir)
+    print("Created fresh VectorStore")
+
+    # Load local documents
     ids, texts, metas = load_local_docs(docs_dir)
     print(f"Loaded {len(texts)} local documents from {docs_dir}")
 
+    # Optionally crawl URLs
     if urls:
         uids, utxts, umetas = crawl_urls(urls)
         ids += uids
@@ -98,16 +147,16 @@ def main(docs_dir: str, index_dir: str, urls=None):
         metas += umetas
         print(f"Crawled {len(uids)} URLs")
 
+    # Index documents
     if texts:
         vs.add_docs(ids, texts, metas)
         print(f"SUCCESS: Indexed {len(texts)} documents into {index_dir}")
     else:
         print("WARNING: No documents found to index.")
 
-
 if __name__ == "__main__":
     ap = argparse.ArgumentParser(description="Build/update RAG index from local docs and optional URLs")
-    ap.add_argument("--docs-dir", required=True, help="Directory containing . txt/.md/. pdf files")
+    ap.add_argument("--docs-dir", required=True, help="Directory containing . txt/. md/. pdf files")
     ap.add_argument("--index-dir", required=True, help="Directory to store the vector index")
     ap.add_argument("--urls", nargs="*", default=None, help="Optional list of URLs to crawl and index")
     args = ap.parse_args()

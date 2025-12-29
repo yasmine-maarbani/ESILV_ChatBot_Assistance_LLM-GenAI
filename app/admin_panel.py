@@ -5,11 +5,11 @@ import streamlit as st
 from datetime import datetime
 from pathlib import Path
 
-def list_docs(docs_dir: str):
+def list_docs(docs_dir:  str):
     files = []
     for root, _, filenames in os.walk(docs_dir):
         for fn in filenames:
-            if fn.lower().endswith((".md", ".txt")):
+            if fn.lower().endswith((".md", ".txt", ".pdf")):
                 files.append(os.path.relpath(os.path.join(root, fn), docs_dir))
     return sorted(files)
 
@@ -89,21 +89,46 @@ def admin_panel(cfg):
     # Rebuild index button
     st.write("Index:")
     st.caption(f"Index directory: {index_dir}")
-    if st.button("Rebuild Index", key="admin_rebuild_index_btn"):
+
+    if st.button("Rebuild Index", key="rebuild_btn"):
+        docs_dir = cfg["rag"]["docs_dir"]
+        index_dir = cfg["rag"]["index_dir"]
+
+        st.info("Releasing index and rebuilding...")
+
         try:
-            py = sys.executable  # ensure same interpreter/venv as Streamlit
+            # Close and delete all references to the index
+            if "vs" in st.session_state:
+                del st.session_state.vs
+
+            if "retrieval" in st.session_state:
+                del st.session_state.retrieval
+
+            # Force garbage collection
+            import gc
+            gc.collect()
+
+            # Wait for file handles to close
+            import time
+            time.sleep(2)
+
+            st.info("Starting rebuild (this may take up to 30 seconds)...")
+
+            # Run rebuild subprocess
+            py = sys.executable
             cmd = [py, "-m", "rag.index_builder", "--docs-dir", docs_dir, "--index-dir", index_dir]
-            with st.spinner("Rebuilding index..."):
-                result = subprocess.run(cmd, capture_output=True, text=True)
+
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
+
             if result.returncode == 0:
-                st.success("Index rebuilt successfully.")
-                # Signal Chat tab to reload the index automatically
+                st.success(" Index rebuild successful!")
                 st.session_state["needs_index_reload"] = True
                 if result.stdout:
                     st.text(result.stdout)
             else:
-                st.error("Index rebuild failed.")
+                st.error(" Index rebuild failed.")
                 st.text(result.stdout or "")
                 st.text(result.stderr or "")
+
         except Exception as e:
             st.error(f"Failed to rebuild index: {e}")
