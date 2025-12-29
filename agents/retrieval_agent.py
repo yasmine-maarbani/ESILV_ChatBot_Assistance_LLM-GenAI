@@ -11,6 +11,8 @@ Do NOT include inline citations, URLs, or a 'Source:' line in your answer.
 The UI will add sources separately."""
 
 def _trim(text: str, max_chars: int = 5000) -> str:
+    if text is None:
+        return ""
     return text if len(text) <= max_chars else text[:max_chars] + "..."
 
 class RetrievalAgent:
@@ -20,13 +22,43 @@ class RetrievalAgent:
 
     def answer(self, question: str) -> Dict:
         docs = self.vs.query(question, k=8)
-        context = "\n\n".join([f"[{d[2].get('source','unknown')}]\n{_trim(d[1])}" for d in docs])
+
+        if not docs:
+            return {
+                "answer": "Aucune information pertinente trouvée dans les documents.",
+                "sources": []
+            }
+
+        context_parts = []
+        for d in docs:
+            # d is tuple:  (id, text, metadata)
+            doc_id, text, metadata = d
+
+            # Handle None or missing metadata
+            if metadata and isinstance(metadata, dict):
+                source = metadata.get('source', 'unknown')
+            else:
+                source = 'unknown'
+
+            context_parts.append(f"[{source}]\n{_trim(text)}")
+
+        context = "\n\n".join(context_parts)
+
         messages = [
             {"role": "system", "content": SYSTEM_PROMPT},
             {"role": "user", "content": f"Question: {question}\n\nContext:\n{context}"},
         ]
+
         answer = (self.llm.chat(messages) or "").strip()
         if not answer:
             answer = "I don't know based on the provided documents."
-        sources = [d[2].get("source", "unknown") for d in docs]
+
+        sources = []
+        for d in docs:
+            metadata = d[2]
+            if metadata and isinstance(metadata, dict):
+                sources.append(metadata.get("source", "unknown"))
+            else:
+                sources.append("unknown")
+
         return {"answer": answer, "sources": sources}
