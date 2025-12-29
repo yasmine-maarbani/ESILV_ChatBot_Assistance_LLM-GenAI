@@ -23,6 +23,7 @@ Examples of FORM:
 - "I want to speak with an advisor"
 - "Email me more information"
 - "My email is yasmine@example.com"
+-"Je voudrais recevoir plus d'informations sur les admissions
 
 IMPORTANT:  Respond with ONLY valid JSON in this exact format:
 {"intent": "retrieval"} 
