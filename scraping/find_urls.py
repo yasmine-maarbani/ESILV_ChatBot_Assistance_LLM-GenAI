@@ -15,7 +15,7 @@ def init_robots_parser():
     try:
         resp = requests.get(url, timeout=5)
         status = resp.status_code
-        print("robots.txt status =", status)
+        #print("robots.txt status =", status)
 
         rp = RobotFileParser()
         rp.parse(resp.text.splitlines())

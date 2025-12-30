@@ -70,11 +70,11 @@ def auto_scraping(docs_dir, scraping_dir):
         st.sidebar.caption(f"Time since last scraping: {(st.session_state.app_start_time - last_scrape).days} days.")
         if (st.session_state.app_start_time - last_scrape).days >= 2 :
             st.sidebar.caption("The retrieval database might be obsolete.")
-            st.sidebar.caption("Updating the database:")
+            st.sidebar.caption("Updating the database -->")
             try:
                 py = sys.executable  # ensure same interpreter/venv as Streamlit
                 cmd = [py, "-m", "scraping.scraper", "--raw-dir", scraping_dir, "--parsed-dir", docs_dir]
-                with st.sidebar.caption("Collecting data..."):
+                with st.spinner("Collecting data..."):
                     result = subprocess.run(cmd, capture_output=True, text=True)
                 if result.returncode == 0:
                     st.sidebar.success("Data collected successfully.")

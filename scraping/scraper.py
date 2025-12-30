@@ -45,7 +45,7 @@ def scrape_esilv_pages(
         safe_name = rel_path.strip("/").replace("/", "_") or "index"
         out_file = output_dir / f"{safe_name}.html"
 
-        print(f"[scraper_esilv] Fetch {url} -> {out_file}")
+        # print(f"[scraper_esilv] Fetch {url} -> {out_file}")
         html = fetch_page(url)
         save_raw_html(html, out_file)
         downloaded_files.append(out_file)
