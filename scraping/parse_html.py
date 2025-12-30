@@ -6,8 +6,8 @@ from bs4 import BeautifulSoup
 
 def extract_main_text(html: str) -> str:
     """
-    Extrait le texte principal d'une page HTML.
-    Version simple : enlève scripts, styles, nav, footer, puis récupère le <body>.
+    Extrait uniquement le texte des titres (h1–h6) et des paragraphes (p),
+    dans leur ordre d'apparition dans le document HTML.
     """
     soup = BeautifulSoup(html, "html.parser")
 
@@ -15,22 +15,26 @@ def extract_main_text(html: str) -> str:
     for tag in soup(["script", "style", "noscript"]):
         tag.decompose()
 
-    # Optionnel : supprimer les nav/footer
+    # Optionnel : supprimer nav et footer (souvent du bruit)
     for tag in soup.find_all(["nav", "footer"]):
         tag.decompose()
 
     body = soup.body or soup
-    text = body.get_text(separator="\n")
-    # Nettoyage simple
-    lines = [line.strip() for line in text.splitlines()]
-    lines = [line for line in lines if line]
-    return "\n".join(lines)
+
+    texts = []
+    for tag in body.find_all(["h1", "h2", "h3", "h4", "h5", "h6", "p"]):
+        text = tag.get_text(strip=True)
+        if text:
+            texts.append(text)
+
+    return "\n".join(texts)
 
 
-def parse_html_file(path: Path) -> str:
-    """Lit un fichier HTML et renvoie le texte principal extrait."""
-    html = path.read_text(encoding="utf-8")
+def parse_html_file(path: Path) -> str: 
+    """Lit un fichier HTML et renvoie le texte principal extrait.""" 
+    html = path.read_text(encoding="utf-8") 
     return extract_main_text(html)
+
 
 
 def parse_html_folder(input_dir: Path | str, output_dir: Path | str) -> List[Path]:

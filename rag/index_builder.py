@@ -26,6 +26,7 @@ except ImportError:
     PDF_AVAILABLE = False
 
 from .vector_store import VectorStore
+from pathlib import Path
 
 SUPPORTED_EXTENSIONS = {".txt", ".md"}
 if PDF_AVAILABLE:

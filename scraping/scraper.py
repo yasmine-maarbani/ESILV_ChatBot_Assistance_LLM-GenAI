@@ -59,7 +59,7 @@ if __name__ == "__main__":
     ap.add_argument("--parsed-dir", required=True)
     args = ap.parse_args()
 
-    pages_url = discover_all_urls(max_pages=100)
+    pages_url = discover_all_urls(max_pages=10)
 
     #print("[1] Téléchargement des pages HTML…")
     downloaded = scrape_esilv_pages(
